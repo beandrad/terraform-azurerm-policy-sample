@@ -34,3 +34,13 @@ It is important to note that policy data resource should be imported using its p
 ## Running Terraform configuration locally
 
 The Terraform configuration defined in this module can be run locally inside the devcontainer. One way of doing so is by creating an `.env` file that defines the values of the variables in `.env.template`. The variables defined in the `.env` file are exported when creating the devcontainer.
+
+## Dependency issues
+
+In a Terraform configuration, when an `azurerm_policy_definition` resource is referenced from an `azurerm_policy_set_definition` resource if the policy definition and the corresponding reference from the policy set are removed in a later terraform configuration, the `terraform apply` fails. The reason is that Terraform tries to delete the definition before updating the policy set.
+
+This is the expected Terraform behavior in the presence of dependencies: (1) delete old resource, (2) create new resource, (3) update resource dependencies (in the case above only (1) and (3) are executed). Terraform provides a way of altering this behavior: `lifecycle.create_before_destroy`, so that order in which the operations are executed is (1) create new resource, (2) update resource dependencies, (3) delete old resource.
+
+Adding the `lifecycle.create_before_destroy` flag fixes the issue in the case above (where we just want to remove the policy definition and update the policy set) and it's a standard practice in resources from other providers. However, it creates another issue. The fact that the `create` operation is executed before `delete` poses a problem when trying to update any of the fields (different from the resource `name`) that force a resource recreation; the `terraform apply` will fail due to a conflict. The reason is that most Azure resources (such as `azurerm_policy_definition`) use the resource name to uniquely identify a resource.
+
+Therefore, if no `lifecycle.create_before_destroy` is set in the policy definition, when a policy definition referenced by an initiative needs to be deleted, this change should be applied in two different terraform apply steps: (1) delete the policy definition reference from the initiative, (2) delete the policy definition.
