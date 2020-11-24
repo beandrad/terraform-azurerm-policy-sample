@@ -1,0 +1,15 @@
+{
+    "if": {
+        "allOf": [
+            {
+                "not": {
+                    "field": "location",
+                    "in": "[parameters('allowedLocations')]"
+                }
+            }
+        ]
+    },
+    "then": {
+        "effect": "deny"
+    }
+}
