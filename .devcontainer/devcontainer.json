@@ -1,0 +1,27 @@
+// For format details, see https://aka.ms/vscode-remote/devcontainer.json or this file's README at:
+{
+    "name": "Policy Module",
+    
+    "dockerFile": "Dockerfile",
+    
+    "runArgs": [
+		// Enable SSH for git
+		"-v",
+		"${env:HOME}${env:USERPROFILE}/.ssh:/root/.ssh-localhost:ro"
+	],
+    
+    "postCreateCommand": "mkdir -p /root/.ssh && cp -r /root/.ssh-localhost/* /root/.ssh && chmod 700 /root/.ssh && chmod 600 /root/.ssh/*",
+    
+    "settings": { 
+		"terminal.integrated.shell.linux": "/bin/zsh"
+    },
+    
+	"extensions": [
+		"hashicorp.terraform",
+		"ms-azuretools.vscode-docker",
+		"streetsidesoftware.code-spell-checker",
+		"eamodio.gitlens",
+		"yzhang.markdown-all-in-one",
+		"davidanson.vscode-markdownlint"
+	]
+}
