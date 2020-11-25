@@ -44,3 +44,28 @@ This is the expected Terraform behavior in the presence of dependencies: (1) del
 Adding the `lifecycle.create_before_destroy` flag fixes the issue in the case above (where we just want to remove the policy definition and update the policy set) and it's a standard practice in resources from other providers. However, it creates another issue. The fact that the `create` operation is executed before `delete` poses a problem when trying to update any of the fields (different from the resource `name`) that force a resource recreation; the `terraform apply` will fail due to a conflict. The reason is that most Azure resources (such as `azurerm_policy_definition`) use the resource name to uniquely identify a resource.
 
 Therefore, if no `lifecycle.create_before_destroy` is set in the policy definition, when a policy definition referenced by an initiative needs to be deleted, this change should be applied in two different terraform apply steps: (1) delete the policy definition reference from the initiative, (2) delete the policy definition.
+
+## Tests
+
+The acceptance tests in the `tests/` directory check whether the defined initiatives actually work: not compliant resources cannot be deployed whereas compliant ones are allowed to be deployed.
+
+The following conventions were followed when testing the policy module:
+
+- Tests check that the initiative is working as expected, as opposed to test individual policies. The reason is that this module only outputs initiatives, all the policies are linked from an initiative.
+  
+- Only the behavior of custom policies is tested; built-in policies are expected to work.
+
+- Only policies with `deny` effect are tested; other effects such as `audit` may be applied long after the resource is created.
+
+Tests are implemented using the [Go testing framework](https://golang.org/pkg/testing/) together with the [Terratest module](https://terratest.gruntwork.io/docs/). This configuration allows to call the Terraform configuration from the Go tests.
+
+The way the test are design is as follows:
+
+- Setup: load the policies module to define policies and initiatives and assign initiatives ([`tests/terraform/main.tf`](tests/terraform/main.tf)).
+- Run: create compliant resources (for example, [`tests/terraform/resource-location-allow`](tests/terraform/resource-location-allow)) and non-compliant resources (for example, [`tests/terraform/resource-location-deny`](tests/terraform/resource-location-deny)).
+- Assert: check whether the policy has been correctly applied using the returned error from the Terraform apply.
+- Teardown: delete test resources.
+  
+In order to speed up the tests, test cases are run in parallel using the [`Parallel()` function](https://golang.org/pkg/testing/#T.Parallel).
+
+It is important to note that the teardown is done separately for the resources provisioned during the setup and for the resources created by each of the test cases. In the first case, the [`Cleanup` function](https://godoc.org/testing#T.Cleanup) is used; `defer` wouldn't work since deferred functions are run before parallel subtests are executed. On the other hand, resources created by the test cases are destroyed in a deferred function.
