@@ -55,17 +55,15 @@ The following conventions were followed when testing the policy module:
   
 - Only the behavior of custom policies is tested; built-in policies are expected to work.
 
-- Only policies with `deny` effect are tested; other effects such as `audit` may be applied long after the resource is created.
-
 Tests are implemented using the [Go testing framework](https://golang.org/pkg/testing/) together with the [Terratest module](https://terratest.gruntwork.io/docs/). This configuration allows to call the Terraform configuration from the Go tests.
 
 The way the test are design is as follows:
 
 - Setup: load the policies module to define policies and initiatives and assign initiatives ([`tests/terraform/main.tf`](tests/terraform/main.tf)).
-- Run: create compliant resources (for example, [`tests/terraform/resource-location-allow`](tests/terraform/resource-location-allow)) and non-compliant resources (for example, [`tests/terraform/resource-location-deny`](tests/terraform/resource-location-deny)).
+- Run: create compliant resources (for example, [`tests/terraform/resource-location-allow`](tests/terraform/resource-location-allow)) and non-compliant resources (for example, [`tests/terraform/resource-location-audit`](tests/terraform/resource-location-audit)).
 - Assert: check whether the policy has been correctly applied using the returned error from the Terraform apply.
 - Teardown: delete test resources.
   
-In order to speed up the tests, test cases are run in parallel using the [`Parallel()` function](https://golang.org/pkg/testing/#T.Parallel).
+Testing effects others than `deny` is particularly slow, since the policy evaluation is quite takes quite a long time, in the order of minutes. In order to speed up the tests, test cases are run in parallel using the [`Parallel()` function](https://golang.org/pkg/testing/#T.Parallel).
 
 It is important to note that the teardown is done separately for the resources provisioned during the setup and for the resources created by each of the test cases. In the first case, the [`Cleanup` function](https://godoc.org/testing#T.Cleanup) is used; `defer` wouldn't work since deferred functions are run before parallel subtests are executed. On the other hand, resources created by the test cases are destroyed in a deferred function.

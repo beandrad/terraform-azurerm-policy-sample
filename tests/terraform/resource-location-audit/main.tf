@@ -23,3 +23,7 @@ resource "azurerm_resource_group" "test" {
   name     = azurecaf_name.rg_name.result
   location = "westeurope"
 }
+
+output "test_resource_id" {
+  value = azurerm_resource_group.test.id
+}
